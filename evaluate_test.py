@@ -1,5 +1,6 @@
 import argparse
 import csv
+import gc
 import inspect
 import os
 
@@ -8,6 +9,11 @@ import torch.nn as nn
 from PIL import UnidentifiedImageError
 from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
+
+
+def is_cuda_oom_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return "out of memory" in message and "cuda" in message
 
 
 def compute_metrics(all_labels: torch.Tensor, all_preds: torch.Tensor, num_classes: int):
@@ -193,6 +199,47 @@ def resolve_eval_class_names(data_dir: str, train_subdir: str, test_dataset_clas
     return eval_class_names
 
 
+def run_eval_pass(
+    model,
+    test_loader,
+    device,
+    criterion,
+    valid_test_indices,
+    remap_table,
+):
+    running_loss = 0.0
+    running_corrects = 0
+    valid_sample_count = 0
+    all_preds = []
+    all_labels = []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            valid_mask = torch.isin(labels, valid_test_indices)
+            if not torch.any(valid_mask):
+                continue
+
+            inputs = inputs[valid_mask]
+            labels = labels[valid_mask]
+
+            remapped_labels = remap_table[labels]
+
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, remapped_labels)
+
+            running_loss += loss.item() * inputs.size(0)
+            running_corrects += torch.sum(preds == remapped_labels.data)
+            valid_sample_count += inputs.size(0)
+            all_preds.append(preds.detach().cpu())
+            all_labels.append(remapped_labels.detach().cpu())
+
+    return running_loss, running_corrects, valid_sample_count, all_preds, all_labels
+
+
 def main():
     args = parse_args()
 
@@ -214,13 +261,6 @@ def main():
     test_dataset = SafeImageFolder(test_dir, test_transform)
     if len(test_dataset) == 0:
         raise RuntimeError("Tập test không có ảnh hợp lệ để evaluate.")
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-    )
-
     test_class_names = test_dataset.classes
     print(f"Các class test: {test_class_names}")
 
@@ -275,35 +315,56 @@ def main():
     model.eval()
 
     criterion = nn.CrossEntropyLoss()
-    running_loss = 0.0
-    running_corrects = 0
-    valid_sample_count = 0
-    all_preds = []
-    all_labels = []
+    requested_batch_size = max(1, int(args.batch_size))
+    effective_batch_size = requested_batch_size
 
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+    while True:
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=effective_batch_size,
+            shuffle=False,
+            num_workers=args.num_workers,
+            pin_memory=device.type == "cuda",
+        )
+        try:
+            (
+                running_loss,
+                running_corrects,
+                valid_sample_count,
+                all_preds,
+                all_labels,
+            ) = run_eval_pass(
+                model=model,
+                test_loader=test_loader,
+                device=device,
+                criterion=criterion,
+                valid_test_indices=valid_test_indices,
+                remap_table=remap_table,
+            )
+            if effective_batch_size != requested_batch_size:
+                print(
+                    "[Info] Evaluate đã tự giảm batch size do OOM: "
+                    f"{requested_batch_size} -> {effective_batch_size}"
+                )
+            break
+        except (torch.OutOfMemoryError, RuntimeError) as error:
+            if device.type != "cuda" or not is_cuda_oom_error(error):
+                raise
+            if effective_batch_size == 1:
+                raise
 
-            valid_mask = torch.isin(labels, valid_test_indices)
-            if not torch.any(valid_mask):
-                continue
+            next_batch_size = max(1, effective_batch_size // 2)
+            if next_batch_size == effective_batch_size:
+                raise
 
-            inputs = inputs[valid_mask]
-            labels = labels[valid_mask]
-
-            remapped_labels = remap_table[labels]
-
-            outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
-            loss = criterion(outputs, remapped_labels)
-
-            running_loss += loss.item() * inputs.size(0)
-            running_corrects += torch.sum(preds == remapped_labels.data)
-            valid_sample_count += inputs.size(0)
-            all_preds.append(preds.detach().cpu())
-            all_labels.append(remapped_labels.detach().cpu())
+            print(
+                "[Warning] CUDA OOM khi evaluate với batch_size="
+                f"{effective_batch_size}. Thử lại với batch_size={next_batch_size}."
+            )
+            effective_batch_size = next_batch_size
+            del test_loader
+            gc.collect()
+            torch.cuda.empty_cache()
 
     if valid_sample_count == 0:
         raise RuntimeError("Không có ảnh hợp lệ để evaluate sau khi lọc class không khớp model.")

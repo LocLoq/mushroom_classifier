@@ -138,13 +138,18 @@ for model_name in "${MODELS[@]}"; do
   current_stage="eval:${model_name}"
   notify_discord "[Stage Start] ${current_stage}"
 
+  eval_batch_size="${EVAL_BATCH_SIZE:-768}"
+  if [[ "$model_name" == "vgg16" ]]; then
+    eval_batch_size="${EVAL_BATCH_SIZE_VGG16:-192}"
+  fi
+
   "$PYTHON_BIN" evaluate_test.py \
     --model "$model_name" \
     --data-dir mushrooms_dataset \
     --train-subdir train \
     --test-subdir test \
     --model-path "best_nammushroom_${model_name}.pth" \
-    --batch-size 768 \
+    --batch-size "$eval_batch_size" \
     --num-workers 12 \
     --metrics-csv "test_metrics_${model_name}.csv" \
     --confusion-dir "confusion_matrices_test_${model_name}"
