@@ -88,8 +88,6 @@ stack-data==0.6.3
 starlette==0.52.1
 sympy==1.14.0
 tinycss2==1.4.0
-torch==2.10.0+cu126
-torchvision==0.25.0+cu126
 tornado==6.5.5
 traitlets==5.14.3
 typer==0.24.1
