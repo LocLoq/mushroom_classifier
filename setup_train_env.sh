@@ -6,12 +6,15 @@ set -euo pipefail
 # or:
 #   bash setup_train_env.sh "https://drive.google.com/file/d/.../view?usp=sharing"
 # Optional env vars:
-#   VENV_NAME=my_project_env
+#   VENV_NAME=.venv
 #   ZIP_FILE=dataset.zip
 #   EXTRACT_DIR=<defaults to ZIP_FILE without .zip>
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
 ZIP_URL="${1:-${ZIP_URL:-}}"
-VENV_NAME="${VENV_NAME:-my_project_env}"
+VENV_NAME="${VENV_NAME:-.venv}"
 ZIP_FILE="${ZIP_FILE:-dataset.zip}"
 EXTRACT_DIR="${EXTRACT_DIR:-${ZIP_FILE%.zip}}"
 
