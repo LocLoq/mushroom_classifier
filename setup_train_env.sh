@@ -55,7 +55,7 @@ source "${VENV_NAME}/bin/activate"
 
 echo "[5/8] Install Python packages in venv..."
 python -m pip install --upgrade pip
-python -m pip install gdown
+python -m pip install --upgrade gdown
 python -m pip install psutil
 python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
@@ -68,9 +68,40 @@ else
   echo "No requirement.txt or requirements.txt found. Skipping requirements install."
 fi
 
+extract_drive_file_id() {
+  local input="$1"
+
+  if [[ "$input" =~ /file/d/([^/?]+) ]]; then
+    echo "${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  if [[ "$input" =~ [\?\&]id=([^\&]+) ]]; then
+    echo "${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  if [[ "$input" =~ ^[A-Za-z0-9_-]{20,}$ ]]; then
+    echo "$input"
+    return 0
+  fi
+
+  return 1
+}
+
 echo "[7/8] Download zip with gdown..."
-# --fuzzy allows direct Google Drive sharing links.
-gdown --fuzzy "${ZIP_URL}" -O "${ZIP_FILE}"
+if python -m gdown "${ZIP_URL}" -O "${ZIP_FILE}"; then
+  :
+else
+  echo "Direct gdown URL download failed. Trying Google Drive file id fallback..."
+  if file_id="$(extract_drive_file_id "${ZIP_URL}")"; then
+    python -m gdown "https://drive.google.com/uc?id=${file_id}" -O "${ZIP_FILE}"
+  else
+    echo "Could not parse Google Drive file id from ZIP_URL: ${ZIP_URL}"
+    echo "Use a link like https://drive.google.com/file/d/FILE_ID/view or provide FILE_ID directly."
+    exit 1
+  fi
+fi
 
 echo "[8/8] Unzip dataset..."
 mkdir -p "${EXTRACT_DIR}"

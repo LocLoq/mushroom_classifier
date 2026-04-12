@@ -46,6 +46,7 @@ notify_discord() {
   DISCORD_WEBHOOK_URL="$DISCORD_WEBHOOK_URL" DISCORD_MESSAGE="$message" "$PYTHON_BIN" - <<'PY'
 import json
 import os
+  import sys
 import urllib.request
 
 webhook = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
@@ -61,7 +62,10 @@ if webhook and message:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    urllib.request.urlopen(req, timeout=10).read()
+    try:
+      urllib.request.urlopen(req, timeout=10).read()
+    except Exception as exc:
+      print(f"[warn] Discord notify failed: {exc}", file=sys.stderr)
 PY
 }
 
