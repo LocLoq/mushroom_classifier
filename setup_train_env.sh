@@ -8,12 +8,12 @@ set -euo pipefail
 # Optional env vars:
 #   VENV_NAME=my_project_env
 #   ZIP_FILE=dataset.zip
-#   EXTRACT_DIR=dataset
+#   EXTRACT_DIR=<defaults to ZIP_FILE without .zip>
 
 ZIP_URL="${1:-${ZIP_URL:-}}"
 VENV_NAME="${VENV_NAME:-my_project_env}"
 ZIP_FILE="${ZIP_FILE:-dataset.zip}"
-EXTRACT_DIR="${EXTRACT_DIR:-dataset}"
+EXTRACT_DIR="${EXTRACT_DIR:-${ZIP_FILE%.zip}}"
 
 if [[ "$(id -u)" -eq 0 ]]; then
   SUDO_CMD=()
