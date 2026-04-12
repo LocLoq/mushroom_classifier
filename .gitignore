@@ -1,0 +1,69 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# Python cache / build
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing / type checking / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+nohup.out
+
+# ML artifacts / model exports
+*.pth
+*.pt
+*.onnx
+
+# Training outputs
+checkpoints/
+confusion_matrices/
+confusion_matrices_test/
+plots/
+runs/
+wandb/
+
+# Generated reports / metrics
+training_metrics.csv
+training_batch_metrics.csv
+test_metrics.csv
+training_report.json
+
+# Local datasets
+mushrooms_dataset/
+test_mushroom_dataset/
+data/
+datasets/
