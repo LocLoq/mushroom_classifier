@@ -50,20 +50,28 @@ nohup.out
 
 # Training outputs
 checkpoints/
-confusion_matrices/
-confusion_matrices_test/
+confusion_matrices*/
+confusion_matrices_test*/
 plots/
 runs/
 wandb/
 
 # Generated reports / metrics
-training_metrics.csv
-training_batch_metrics.csv
-test_metrics.csv
-training_report.json
+training_metrics*.csv
+training_batch_metrics*.csv
+test_metrics*.csv
+training_report*.json
 
 # Local datasets
 mushrooms_dataset/
 test_mushroom_dataset/
 data/
 datasets/
+logs/
+inaturalist-images/
+*.docx
+*.csv
+*.pdf
+*.zip
+old_result/
+helpers/

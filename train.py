@@ -222,7 +222,7 @@ def parse_args():
     parser.add_argument(
         '--model',
         type=str,
-        choices=['efficientnet_b0', 'resnet18', 'vgg16'],
+        choices=['efficientnet_b0', 'resnet18', 'vgg16', 'mobilenet_v3'],
         default='efficientnet_b0',
         help='Backbone model architecture',
     )
@@ -429,7 +429,7 @@ def build_dataloader(dataset, phase: str, batch_size: int, num_workers: int, see
 
 
 def get_model_parameter_groups(model, model_name: str):
-    if model_name in ('efficientnet_b0', 'vgg16'):
+    if model_name in ('efficientnet_b0', 'vgg16', 'mobilenet_v3'):
         backbone_params = list(model.features.parameters())
         head_params = list(model.classifier.parameters())
         return backbone_params, head_params
@@ -448,7 +448,6 @@ def get_model_parameter_groups(model, model_name: str):
             backbone_params.extend(list(module.parameters()))
         head_params = list(model.fc.parameters())
         return backbone_params, head_params
-
     raise ValueError(f'Model không được hỗ trợ: {model_name}')
 
 
@@ -473,6 +472,10 @@ def build_model(model_name: str, num_classes: int, device):
         model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
         num_ftrs = model.classifier[6].in_features
         model.classifier[6] = nn.Linear(num_ftrs, num_classes)
+    elif model_name == 'mobilenet_v3':
+        model = models.mobilenet_v3_large(weights=models.MobileNet_V3_Large_Weights.DEFAULT)
+        num_ftrs = model.classifier[3].in_features
+        model.classifier[3] = nn.Linear(num_ftrs, num_classes)
     else:
         raise ValueError(f'Model không được hỗ trợ: {model_name}')
 
@@ -485,6 +488,8 @@ def unfreeze_last_feature_blocks(model, model_name: str, unfreeze_blocks: int):
         feature_blocks = list(model.features.children())
     elif model_name == 'resnet18':
         feature_blocks = [model.layer1, model.layer2, model.layer3, model.layer4]
+    elif model_name == 'mobilenet_v3':
+        feature_blocks = list(model.features.children())
     else:
         raise ValueError(f'Model không được hỗ trợ: {model_name}')
 
