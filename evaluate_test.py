@@ -120,7 +120,7 @@ def parse_args():
     parser.add_argument(
         "--model",
         type=str,
-        choices=["efficientnet_b0", "resnet18", "vgg16"],
+        choices=["efficientnet_b0", "resnet18", "vgg16", "mobilenet_v3"],
         default="efficientnet_b0",
         help="Kiến trúc mô hình để evaluate",
     )
@@ -150,6 +150,9 @@ def infer_num_classes_from_state_dict(state_dict, model_name: str) -> int:
     elif model_name == "vgg16":
         weight_key = "classifier.6.weight"
         bias_key = "classifier.6.bias"
+    elif model_name == "mobilenet_v3":
+        weight_key = "classifier.3.weight"
+        bias_key = "classifier.3.bias"
     else:
         raise ValueError(f"Model không được hỗ trợ: {model_name}")
 
@@ -179,6 +182,12 @@ def build_model_for_eval(model_name: str, num_classes: int):
         model = models.vgg16(weights=None)
         num_ftrs = model.classifier[6].in_features
         model.classifier[6] = nn.Linear(num_ftrs, num_classes)
+        return model
+
+    if model_name == "mobilenet_v3":
+        model = models.mobilenet_v3_large(weights=None)
+        num_ftrs = model.classifier[3].in_features
+        model.classifier[3] = nn.Linear(num_ftrs, num_classes)
         return model
 
     raise ValueError(f"Model không được hỗ trợ: {model_name}")
