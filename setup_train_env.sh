@@ -44,14 +44,16 @@ echo "[2/8] Add deadsnakes PPA and install Python 3.12..."
 "${SUDO_CMD[@]}" apt update
 "${SUDO_CMD[@]}" apt install python3.12 python3.12-venv -y
 
-echo "[3/8] Install pip for Python 3.12..."
-curl -sS https://bootstrap.pypa.io/get-pip.py | "${SUDO_CMD[@]}" python3.12
-
-echo "[4/8] Create virtual environment: ${VENV_NAME}"
+echo "[3/8] Create virtual environment: ${VENV_NAME}"
 python3.12 -m venv "${VENV_NAME}"
 
 # shellcheck disable=SC1090
 source "${VENV_NAME}/bin/activate"
+
+echo "[4/8] Install pip for Python 3.12..."
+curl -sS https://bootstrap.pypa.io/get-pip.py | "${SUDO_CMD[@]}" python3.12
+
+
 
 echo "[5/8] Install Python packages in venv..."
 python -m pip install --upgrade pip
